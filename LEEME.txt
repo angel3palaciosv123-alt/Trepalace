@@ -1,0 +1,190 @@
+TREPALACE — ARQUITECTURA MODULAR POR TIPO DE PROYECTO
+
+ABRIR
+1. Descomprime la carpeta completa.
+2. Abre index.html con doble clic (no requiere servidor ni módulos ES).
+3. Opcional: python3 construir.py genera Trepalace.html (un solo archivo).
+   Trepalace.html debe quedar junto a la carpeta img/ (logos y fotos de los proyectos).
+
+FLUJO DE LA PLATAFORMA
+Inicio de sesión -> pantalla principal con los 4 tipos de proyecto -> Entrar a un tipo.
+Dentro de un tipo, el riel de la izquierda permite cambiar de tipo o volver a "Todos los proyectos".
+Cada tipo guarda su proyecto por separado en el navegador y en su propio archivo .json.
+El proyecto de agua residual conserva la clave original ("ptarProyecto"): lo ya guardado sigue ahí.
+
+TIPOS DE PROYECTO Y SUFIJOS
+  STAR  Sistemas de tratamiento de agua residual   js/modulos/star/   (módulos en uso)
+  STAP  Sistemas de tratamiento de agua potable    js/modulos/stap/   (próximamente)
+  IHS   Redes e instalaciones hidrosanitarias      js/modulos/ihs/    (próximamente)
+  RS    Diseño de relleno sanitario                js/modulos/rs/     (próximamente)
+Todo nombre global de un módulo (funciones, variables y el id del módulo) termina en el sufijo de
+su tipo: calcularCaudal_STAR(), DP_STAR, TR_STAR, id "caudal_STAR". Así, cuando hagas el caudal
+de agua potable, se llamará calcularCaudal_STAP() y no chocará con el de agua residual.
+Las claves de datos guardados (PRO.Qmd, PRO.REJ, ...) NO cambiaron, para que los proyectos .json
+antiguos se sigan cargando.
+
+ESTRUCTURA
+css/estilos.css           estilos (al final: capa de tipos de proyecto, riel, pantalla principal y login verde)
+img/                      logos
+img/proyectos/            foto del banner de cada tipo: STAR.jpg, STAP.jpg, IHS.jpg, RS.jpg
+                          Para cambiar una foto, reemplaza el archivo con el mismo nombre (formato .jpg,
+                          horizontal, unos 1200 x 700 px). STAP, IHS y RS traen una imagen provisional.
+js/nucleo/                funciones generales (sin datos ni reglas de módulos), en 4 carpetas:
+  base/                     configuración y funciones de uso general
+    configuracion.js          usuarios, TIPOS de proyecto (estado, descripción, imagen), grupos del menú, iconos
+    utilidades.js             nf, rnd, gid, esc, esPos, esVacio, normFix
+    campos.js                 campo, selec, tablaHTML, nota
+    registro_modulos.js       MODULOS, modulo(), moduloApi(), moduloListo(), filtro por tipo (modulosOrdenados)
+    almacenamiento.js         guardado por tipo, archivo .json (con el tipo de proyecto)
+    revision.js, memoria.js   ventanas de revisión y memoria de cálculo
+    autocalculo.js            recálculo al cambiar un campo
+  interfaz/                 pantallas y navegación
+    sesion.js                 inicio y cierre de sesión
+    login_decor.js            hojas y viento del login (en verde)
+    proyectos.js              pantalla principal de proyectos, riel lateral y cambio de tipo
+    navegacion.js             menú, vistas, Inicio de cada tipo e imprimir
+    inicializacion.js         arranque (se carga de último)
+  esquemas/                 dibujos SVG que se ven en la página
+    svg_comun.js              svgDefs, svgDimH, svgDimV
+  planos/                   exportación de planos (PDF y AutoCAD)
+    plano_dxf.js              motor que escribe el DXF
+    plano_pdf.js              escribe el PDF
+    plano_comun.js            escalas, rótulo, convenciones, vistas 3D
+    logo_dxf.js               logo del rótulo
+    exportar.js               botones PDF/DWG y ventana de datos de construcción
+js/modulos/star/          datos_preliminares, terminos_referencia, proyeccion_poblacional, caudal,
+                          rejilla, aduccion, desarenador, parshall, proximos (Módulo 7 y 8)
+js/modulos/stap|ihs|rs/   proximos/proximos_<TIPO>.js  (módulos "PRÓXIMAMENTE" de cada tipo)
+js/modulos/plantilla/     molde para módulos nuevos (instrucciones en el encabezado)
+
+CAMBIAR TEXTOS DE LA PANTALLA PRINCIPAL
+En js/nucleo/base/configuracion.js, dentro de TIPOS, cada proyecto tiene:
+  estado: "DISPONIBLE" | "PRÓXIMAMENTE" | "EN CONSTRUCCIÓN"   (se muestra tal cual)
+  desc:   descripción de la tarjeta
+  imagen: ruta de la foto del banner
+
+AGREGAR UN MÓDULO
+1. Copia js/modulos/plantilla/ dentro de la carpeta del tipo (p. ej. js/modulos/stap/floculador/).
+2. Reemplaza _TIPO por el sufijo del tipo (_STAP, _IHS, _RS o _STAR).
+3. Agrega sus <script> en index.html dentro del bloque de ese tipo.
+4. Borra su marcador en js/modulos/<tipo>/proximos/proximos_<TIPO>.js.
+
+REGLAS (sin cambios)
+- Un módulo de cálculo no define tablas, rangos ni datosPreliminares/terminosReferencia.
+- Un módulo se registra con MODULOS.push({id, titulo, grupo, orden, icono, iconoSvg, valores, normalizar,
+  completo, pintar, ...}) (propiedades documentadas en js/nucleo/base/registro_modulos.js).
+
+LIMITACIONES CONOCIDAS
+- Las tarjetas de TR de cada unidad viven dentro del módulo TR (según el diseño solicitado); un módulo nuevo con parámetros requiere agregar su tarjeta allí.
+- Algunos límites de validación escritos como números dentro de los módulos de cálculo (p. ej. Ha/W 0,4–0,8; H 0,75–1,5 m) no se movieron a TR para no alterar el comportamiento.
+- Los valores por defecto de Parshall (parPct, parHaW, ...) siguen aplicándose de forma perezosa en parshall.js, como en el original.
+
+EXPORTAR PLANOS (PDF y DWG) — rejilla, aducción, desarenador y canaleta Parshall
+Debajo de las ilustraciones de cada módulo hay dos botones: EXPORTAR PDF y EXPORTAR DWG.
+Al pulsar cualquiera se abre una ventana que pregunta 2D o 3D:
+  PDF 2D  Láminas A3 de construcción: planta, cortes, detalles, cotas, cuadro de dimensiones,
+          datos hidráulicos, convenciones y rótulo con el logo (proyecto, diseñador, fecha,
+          escala, unidad y número de plano: REJ-01, ADU-01, DES-01, PAR-01...).
+  PDF 3D  Lámina A3 con vista isométrica general y en corte con la lámina de agua, sombreada,
+          con rótulos de cada elemento.
+  DWG 2D  Los mismos planos para AutoCAD, por capas (TRP-*), con cotas reales.
+  DWG 3D  Modelo 3D por capas (concreto, agua, tubería, barrotes) que abre en isométrica.
+          Son mallas 3D reales: en AutoCAD se giran con 3DORBIT y se sombrean con VSCURRENT.
+Los archivos de AutoCAD se descargan como .dxf (el navegador no puede escribir .dwg):
+ábrelos en AutoCAD 2026 y usa Guardar como → .dwg.
+La escala de cada vista se elige sola entre las normalizadas (1:2 a 1:500) para que el dibujo
+llene la lámina. Los datos salen de los cálculos del módulo (no hay valores fijos), y el proyecto
+y el diseñador se toman de Términos de referencia.
+En la aducción hay una barra para el canal y otra para la tubería.
+Archivos: js/nucleo/planos/plano_dxf.js (motor de planos), plano_pdf.js (PDF), plano_comun.js
+(escalas, 3D, lámina isométrica), exportar.js (botones y ventana), logo_dxf.js (logo) y un
+<modulo>_plano.js en cada carpeta de rejilla, aducción, desarenador y parshall.
+
+DESARENADOR (Clase No. 4): tubería de llegada con brida → plataforma de entrada de altura Hp con la
+lámina HL sobre la cresta → vertedero de entrada con la cresta al nivel del agua del desarenador →
+deflectores hasta la corona → vertedero de salida (lámina hv) → plataforma de salida (Hp) → tubería
+de salida con brida. Láminas: DES-01 planta y corte A-A, DES-02 corte B-B y deflector, DES-03 y DES-04
+detalles de las plataformas a escala ampliada (1:5 cuando cabe), DES-05 isométricos.
+La tubería de llegada toma el diámetro adoptado en Aducción (o el canal si no hay tubería).
+
+CAMBIOS VERSIÓN 11 (desarenador)
+- Plataformas: la base b usa la velocidad de llegada del canal o tubería de aducción (antes salía b = H).
+  Si la aducción no está calculada se usa 0,5 m/s (mínimo RAS).
+- Salida de lodos: en el punto bajo de la tolva (L/3) sale una tubería por el muro lateral (batea = fondo),
+  con válvula de compuerta (vástago en tubo camisa y volante en la corona) hacia la CÁMARA DE RECOLECCIÓN
+  DE LODOS: baja, cuadrada y separada del tanque; desde ahí se bombean los lodos por el tubo de extracción.
+  Se dibuja en planta, cortes A-A y B-B, Detalle 4 (DES-02), modelo 3D e ilustraciones del módulo.
+- Parámetros: nuevo campo "Lado de la cámara de recolección de lodos (m)" (por defecto 1,00 m; mínimo 0,50 m).
+  Planos, 3D y esquemas usan ese lado. AL sigue siendo el área de salida de lodos del cálculo de ∀L.
+- Datos preliminares: tabla "Desarenador — Tolva, salida y almacenamiento de lodos" (DP_STAR.T.LODOS) con
+  los límites de ∀L/∀d, AL mínima, diámetros, separación tanque–cámara y lado mínimo/por defecto.
+- Esquemas del módulo: vista en planta con todas sus medidas y válvula con manija de giro; detalles de las
+  plataformas de entrada y salida rehechos; sus tablas muestran solo las medidas acotadas en el dibujo.
+
+CAMBIOS VERSIÓN 12 (ventana de exportar)
+- Igual que en la canaleta Parshall, la ventana de EXPORTAR PDF / DWG de cada módulo trae sus datos de construcción
+  (se guardan en el proyecto; con los valores por defecto los planos salen idénticos a la versión 11):
+    Rejilla      espesor de muros 0,15 · espesor de losa 0,15 · canal de llegada 1,50 · canal de salida 1,50 m
+    Aducción     espesor de muros del canal 0,15 · espesor de losa del canal 0,15 m (solo canal: la tubería
+                 ya trae su espesor del catálogo y no lleva concreto)
+    Desarenador  espesor de muros 0,20 · espesor de losa 0,20 · espesor de deflectores 0,06 ·
+                 tramo de tubería de llegada y salida 0,70 · separación tanque – cámara de lodos 0,70 m
+
+CAMBIOS VERSIÓN 13 (tolva del desarenador)
+- La tolva de lodos se dibuja como TRONCO DE PIRÁMIDE (Clase No. 4, paso 12), igual al volumen ∀L que calcula
+  la página: base mayor As = B·L a la cota −H y base menor AL (cuadrada, lado a = √AL) a la cota −H−ho,
+  centrada en L/3 y pegada al muro lateral de la purga. Las caras de entrada, salida y la opuesta son inclinadas;
+  la del lado de la purga es el mismo muro, que baja hasta AL, y por ahí sale la tubería de lodos.
+- Planos: planta con las aristas de la tolva y el fondo AL; corte A-A con el fondo real en el eje y, en línea
+  oculta, el fondo junto al muro que llega a AL (cota "FONDO AL: a"); corte B-B y Detalle 4 con el fondo AL
+  plano y la pared inclinada; cuadro con el lado "a" y las pendientes del fondo según la geometría.
+- Modelo 3D (PDF y DWG) y esquemas del módulo (planta, corte longitudinal y corte transversal) con la misma tolva.
+- Rejilla, aducción y canaleta Parshall no cambian.
+
+CAMBIOS VERSIÓN 14 (fondo AL y tubería de lodos)
+- El fondo AL de la tolva (cuadrado de lado a = √AL) va CENTRADO en el ancho del desarenador y en L/3.
+  Las cuatro paredes de la tolva son inclinadas (tronco de pirámide simétrico en el ancho).
+- La tubería de lodos Ø 6" nace en una boca en el centro del fondo AL, corre enterrada bajo la losa, pasa por
+  debajo del muro lateral y llega a la válvula de compuerta y a la cámara de recolección de lodos.
+- Se ve así en la planta, cortes A-A y B-B, Detalle 4, modelo 3D y esquemas del módulo.
+  (Reemplaza lo de la versión 13, donde AL iba pegado al muro de la purga.)
+
+==========================================================
+VERSIÓN 15 — Planos más grandes: una vista por hoja
+==========================================================
+- Cada vista va ahora en su propia lámina A3 y con su propia escala, así los dibujos llenan la hoja.
+- Desarenador (7 hojas + 3D): DES-01 planta general · DES-02 corte A-A con cuadro de dimensiones y datos hidráulicos ·
+  DES-03 corte B-B con la salida de lodos · DES-04 detalle 4 (salida y cámara de recolección) · DES-05 deflector ·
+  DES-06 plataforma de entrada · DES-07 plataforma de salida · DES-08 vistas isométricas.
+- Rejilla (4 hojas + 3D): REJ-01 planta · REJ-02 corte A-A con cuadros · REJ-03 corte B-B · REJ-04 detalle de barrotes · REJ-05 3D.
+- Aducción, canal (3 hojas + 3D): ADU-01 planta · ADU-02 perfil A-A con cuadros · ADU-03 sección B-B · ADU-04 3D.
+- Aducción, tubería (3 hojas + 3D): ADU-01 planta · ADU-02 perfil A-A con cuadros · ADU-03 sección del tubo · ADU-04 3D.
+- Canaleta Parshall (6 hojas + 3D): PAR-01 planta · PAR-02 corte A-A con cuadros · PAR-03 a PAR-06 cortes B-B, C-C,
+  D-D y E-E (uno por hoja, misma escala, con su tabla de datos; el cuadro de secciones completo va en PAR-06) · PAR-07 3D.
+- No cambia ningún cálculo, dibujo ni dato: solo la distribución en hojas y las escalas.
+
+==========================================================
+VERSIÓN 16 — Ajustes de presentación de las láminas
+==========================================================
+- Canaleta Parshall: los 4 cortes transversales van 2 por hoja (PAR-03: B-B y C-C · PAR-04: D-D y E-E), a la misma
+  escala y con la base de los muros alineada. Abajo, en una franja horizontal: el cuadro de secciones de esos dos cortes
+  (izquierda) y las convenciones (derecha). El 3D pasa a ser PAR-05.
+- Rótulo de todas las láminas: el nombre del proyecto (y los demás datos) quedan centrados en su casilla.
+- Escalas: solo se usan escalas normalizadas de uso común (1:2, 1:5, 1:10, 1:20, 1:25, 1:50, 1:100, 1:200, 1:250, 1:500).
+  Ya no aparecen 1:15, 1:75, 1:125 ni 1:150.
+- Desarenador: el corte A-A y el corte B-B eligen la escala descontando el espacio real de rótulos y cotas, así el
+  corte A-A sale a 1:50 cuando cabe. En la planta general el título ya no queda pegado a la cota de longitud total.
+
+==========================================================
+VERSIÓN 17 — Dibujos a toda la hoja, sin tablas
+==========================================================
+- Todas las láminas 2D (desarenador, rejilla, aducción canal y tubería, canaleta Parshall) quedan solo con el dibujo,
+  sus cotas y las CONVENCIONES (abajo a la derecha). Se quitaron los cuadros de dimensiones, datos hidráulicos,
+  accesorios y demás tablas, porque esas medidas ya están acotadas en el dibujo.
+- Escala automática: cada vista prueba de la escala más grande a la más pequeña y se queda con la mayor con la que
+  el dibujo, con sus textos y cotas, cabe en la hoja dejando un pequeño margen y sin tocar las convenciones
+  (nueva función P.hojaAjustada en js/nucleo/planos/plano_dxf.js).
+- Escalas disponibles: 1:1, 1:2, 1:5, 1:10, 1:20, 1:25, 1:50, 1:75, 1:100, 1:125, 1:150, 1:200, 1:250, 1:300, 1:400,
+  1:500, 1:750 y 1:1000 (lista ESCALAS_STAR en js/nucleo/planos/plano_comun.js).
+- Parshall: los dos cortes de cada hoja (PAR-03 y PAR-04) van uno al lado del otro, a la misma escala y con la base
+  alineada.
